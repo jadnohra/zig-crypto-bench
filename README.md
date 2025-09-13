@@ -1,5 +1,7 @@
 # zig-crypto-bench
 
+[![CI](https://github.com/jadnohra/zig-crypto-bench/workflows/CI/badge.svg)](https://github.com/jadnohra/zig-crypto-bench/actions)
+
 Cryptographic benchmark suite comparing Zig stdlib and Rust implementations.
 
 ## Overview
@@ -63,12 +65,6 @@ zig build bench -- --save-results --iterations 1000 --warmup 100
 - Correctness verification
 
 
-## Implementations Tested
-
-| Library | Version | Language | Optimizations | Performance Target |
-|---------|---------|----------|---------------|-------------------|
-| Zig stdlib | 0.14.1 | Zig | ARM64 SHA extensions, auto-detected | OPTIMAL |
-| RustCrypto sha2 | 0.10.9 | Rust | features: asm,sha2-asm, target-cpu=native | OPTIMAL |
 
 ## Methodology
 

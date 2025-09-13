@@ -1,0 +1,47 @@
+# Zig build artifacts
+.zig-cache/
+zig-out/
+zig-cache/
+
+# Rust build artifacts
+rust-crypto/target/
+rust-crypto/Cargo.lock
+
+# Editor and IDE directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Claude-specific files
+.claude/
+claude.json
+.claude-code/
+*.claude
+CLAUDE.md
+
+# Debug files
+*.pdb
+*.ilk
+*.idb
+
+# Benchmark output
+*.json
+benchmark-results/
+
+# OS specific
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Build directories
+build/
+dist/
+out/

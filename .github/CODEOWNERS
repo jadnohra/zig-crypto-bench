@@ -1,0 +1,9 @@
+# Global code owners
+* @jadnohra
+
+# Rust integration
+rust-crypto/ @jadnohra
+
+# Build configuration
+build.zig @jadnohra
+.github/ @jadnohra

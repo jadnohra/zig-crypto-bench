@@ -1,0 +1,15 @@
+[package]
+name = "rust-crypto"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sha2 = { version = "0.10", features = ["asm"] }
+
+[lib]
+crate-type = ["staticlib"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3

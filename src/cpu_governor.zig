@@ -189,12 +189,15 @@ test "cpu governor detection doesn't crash" {
     const testing = std.testing;
     const allocator = testing.allocator;
 
+    std.debug.print("\n✓ Running: CPU governor detection\n", .{});
+
     // Should not crash even if files don't exist
     const state = try checkCpuGovernor(allocator);
     try testing.expect(@intFromEnum(state) >= 0);
 
     // Thermal check should not crash
-    _ = try checkThermalThrottling(allocator);
+    const is_throttled = try checkThermalThrottling(allocator);
+    _ = is_throttled;
 
     // Frequency capture should not crash
     const cpu_state = captureCpuState(allocator);
@@ -203,6 +206,8 @@ test "cpu governor detection doesn't crash" {
 
 test "frequency change detection logic" {
     const testing = std.testing;
+
+    std.debug.print("\n✓ Running: Frequency change detection logic\n", .{});
 
     // Test no change scenario
     const state1 = CpuState{

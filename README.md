@@ -69,12 +69,14 @@ zig build bench -- --save-results --iterations 1000 --warmup 100
 - CPU frequency governor detection and throttling warnings
 - Framework versioning with git commit tracking in results
 
-Contributing
+## Contributing
+
+### Contributing Results
 
 **Hardware Results**: Help expand hardware coverage by contributing benchmark results from your system. Run with --save-results and submit the generated markdown files from the [results/](results/) directory.
 
 **Open Issues**: Check the [issues](https://github.com/jadnohra/zig-crypto-bench/issues) for tasks ranging from small improvements to major features.
 
-## License
-
-MIT License - see LICENSE file for details.
+**Development Conventions**:
+- Test functions must print their title at the start using `std.debug.print("\n✓ Running: Test Name\n", .{});`
+  (This is idiomatic in Zig as the test runner lacks built-in verbose output)

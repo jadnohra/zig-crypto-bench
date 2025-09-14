@@ -40,10 +40,14 @@ const MachTimer = struct {
 const PosixTimer = struct {
     pub fn read() i128 {
         const ts = std.posix.clock_gettime(std.posix.CLOCK.MONOTONIC) catch {
-            // Fallback to timestamp
             return std.time.nanoTimestamp();
         };
-        return @as(i128, ts.tv_sec) * 1_000_000_000 + ts.tv_nsec;
+
+        // Handle different field names across architectures
+        const seconds = if (@hasField(@TypeOf(ts), "tv_sec")) ts.tv_sec else ts.sec;
+        const nanoseconds = if (@hasField(@TypeOf(ts), "tv_nsec")) ts.tv_nsec else ts.nsec;
+
+        return @as(i128, seconds) * 1_000_000_000 + @as(i128, nanoseconds);
     }
 };
 

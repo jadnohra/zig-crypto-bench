@@ -11,7 +11,7 @@ Cryptographic performance benchmarks across Zig stdlib and Rust implementations 
 
 ## Results
 
-Run benchmarks to generate timestamped results in `results/` directory:
+Run benchmarks to generate timestamped results in [**`results/`**](results/) directory:
 
 ```bash
 zig build bench -- --save-results

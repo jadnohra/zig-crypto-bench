@@ -13,6 +13,7 @@ pub const Benchmark = struct {
     verbose: bool,
     save_results: bool,
     results: std.ArrayList(Result),
+    cpu_state_before: ?@import("cpu_governor.zig").CpuState = null,
 
     const Result = struct {
         operation: []const u8, // e.g., "SHA256 1MB"
@@ -448,6 +449,33 @@ pub const Benchmark = struct {
             else => "std.time.nanoTimestamp",
         };
         try writer.print("- **Timer**: High-resolution ({s})\n", .{timer_name});
+
+        // CPU frequency scaling governor state
+        const cpu_governor = @import("cpu_governor.zig");
+        const governor_state = cpu_governor.checkCpuGovernor(self.allocator) catch .unknown;
+        const governor_str = switch (governor_state) {
+            .performance => "performance (fixed frequency)",
+            .powersave => "powersave (dynamic scaling)",
+            .ondemand => "ondemand (dynamic scaling)",
+            .unknown => "unknown",
+        };
+        try writer.print("- **CPU frequency scaling**: {s}\n", .{governor_str});
+
+        // Power source for macOS
+        if (builtin.os.tag == .macos and governor_state != .unknown) {
+            const power_source = switch (governor_state) {
+                .performance => "AC power",
+                .powersave => "Battery power",
+                else => "Unknown",
+            };
+            try writer.print("- **Power source**: {s}\n", .{power_source});
+        }
+
+        // Thermal throttling state
+        const is_throttled = cpu_governor.checkThermalThrottling(self.allocator) catch false;
+        if (builtin.os.tag == .linux) {
+            try writer.print("- **Thermal throttling**: {s}\n", .{if (is_throttled) "DETECTED" else "none"});
+        }
         try writer.writeAll("\n");
 
         // Library versions and build configuration

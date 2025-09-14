@@ -3,6 +3,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const harness = @import("harness.zig");
+const cpu_governor = @import("cpu_governor.zig");
 
 // Framework version
 pub const VERSION = "v0.1.0";
@@ -77,6 +78,16 @@ pub fn main() !void {
         };
         std.debug.print("  Timer:              High-resolution ({s})\n", .{timer_name});
 
+        // Check CPU frequency governor
+        const governor_state = cpu_governor.checkCpuGovernor(allocator) catch .unknown;
+        cpu_governor.printGovernorWarning(governor_state);
+
+        // Check thermal throttling
+        const is_throttled = cpu_governor.checkThermalThrottling(allocator) catch false;
+        if (is_throttled) {
+            std.debug.print("  Thermal state:      Throttling detected - WARNING\n", .{});
+        }
+
         std.debug.print("\n", .{});
 
         // Library versions and build configuration (formal specification)
@@ -107,6 +118,9 @@ pub fn main() !void {
         .save_results = config.save_results,
     });
     defer bench.deinit();
+
+    // Capture CPU state before benchmarking
+    bench.cpu_state_before = cpu_governor.captureCpuState(allocator);
 
     // Run benchmarks (each module checks the filter internally)
 
@@ -165,6 +179,26 @@ pub fn main() !void {
         defer allocator.free(filename);
         if (!config.json_output) {
             std.debug.print("\nResults saved to {s}\n", .{filename});
+        }
+    }
+
+    // Check if CPU frequency changed during benchmarking
+    if (bench.cpu_state_before) |before| {
+        const after_state = cpu_governor.captureCpuState(allocator);
+        if (after_state) |after| {
+            if (cpu_governor.didFrequencyChange(before, after)) {
+                if (!config.json_output) {
+                    std.debug.print("\n⚠️  WARNING: CPU frequency changed during benchmarking\n", .{});
+                    if (before.frequency) |f1| {
+                        if (after.frequency) |f2| {
+                            std.debug.print("  Before: {d:.2} GHz, After: {d:.2} GHz\n", .{
+                                @as(f64, @floatFromInt(f1)) / 1_000_000_000.0,
+                                @as(f64, @floatFromInt(f2)) / 1_000_000_000.0,
+                            });
+                        }
+                    }
+                }
+            }
         }
     }
 }

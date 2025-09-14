@@ -8,6 +8,8 @@ Crypto benchmarks: Zig vs Rust performance comparison.
 
 Cryptographic performance benchmarks across Zig stdlib and Rust implementations with hardware acceleration.
 
+**Supported platforms**: Linux and macOS (x86_64, aarch64)
+
 
 ## Results
 
@@ -64,6 +66,8 @@ zig build bench -- --save-results --iterations 1000 --warmup 100
 - Correctness verification via bitwise output comparison
 - Transparent build configuration and optimization flags
 - Statistical analysis
+- CPU frequency governor detection and throttling warnings
+- Framework versioning with git commit tracking in results
 
 Contributing
 

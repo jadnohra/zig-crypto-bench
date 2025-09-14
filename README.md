@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/jadnohra/zig-crypto-bench/workflows/CI/badge.svg)](https://github.com/jadnohra/zig-crypto-bench/actions)
 
-Cryptographic benchmark suite comparing Zig stdlib and Rust implementations.
+Crypto benchmarks: Zig vs Rust performance comparison.
 
 ## Overview
 

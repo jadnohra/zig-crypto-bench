@@ -39,8 +39,8 @@ const MachTimer = struct {
 // Linux: Use clock_gettime with CLOCK_MONOTONIC
 const PosixTimer = struct {
     pub fn read() i128 {
-        var ts: std.os.linux.timespec = undefined;
-        std.os.clock_gettime(std.os.linux.CLOCK.MONOTONIC, &ts) catch {
+        var ts: std.posix.timespec = undefined;
+        std.posix.clock_gettime(std.posix.CLOCK.MONOTONIC, &ts) catch {
             // Fallback to timestamp
             return std.time.nanoTimestamp();
         };

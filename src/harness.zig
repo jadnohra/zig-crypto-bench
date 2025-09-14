@@ -24,21 +24,21 @@ pub const Benchmark = struct {
     // All the data we collect for each benchmark
 
     const Result = struct {
-        operation: []const u8,        // e.g., "SHA256 1MB"
-        implementation: []const u8,   // e.g., "OpenSSL"
+        operation: []const u8, // e.g., "SHA256 1MB"
+        implementation: []const u8, // e.g., "OpenSSL"
 
         // Core timing metrics (in nanoseconds)
-        ns_per_op: u64,               // Mean time
-        median_ns: u64,               // Middle value (most reliable)
-        std_dev: f64,                 // Consistency measure
-        min_ns: u64,                  // Best case
-        max_ns: u64,                  // Worst case
+        ns_per_op: u64, // Mean time
+        median_ns: u64, // Middle value (most reliable)
+        std_dev: f64, // Consistency measure
+        min_ns: u64, // Best case
+        max_ns: u64, // Worst case
 
         // Optional: for throughput calculation
-        bytes_processed: ?usize,      // If processing data
+        bytes_processed: ?usize, // If processing data
 
         // Measurement metadata
-        batch_size: u32,              // How many ops per measurement
+        batch_size: u32, // How many ops per measurement
 
         // Helper function: Calculate throughput if applicable
         fn throughputMBps(self: Result) ?f64 {
@@ -96,8 +96,8 @@ pub const Benchmark = struct {
         self: *Benchmark,
         operation: []const u8,
         implementation: []const u8,
-        comptime func: fn () void,    // Function to benchmark
-        bytes_processed: ?usize,       // Optional: for throughput
+        comptime func: fn () void, // Function to benchmark
+        bytes_processed: ?usize, // Optional: for throughput
     ) !void {
         // Adaptive iteration scaling based on data size
         // Scale down iterations for larger data to keep total runtime reasonable
@@ -252,7 +252,7 @@ pub const Benchmark = struct {
         if (self.verbose and result.batch_size > 1) {
             std.debug.print("  Batch size:  {d} ops/measurement (timer resolution ~{d}ns)\n", .{
                 result.batch_size,
-                result.min_ns * result.batch_size,  // Estimate timer resolution from min time
+                result.min_ns * result.batch_size, // Estimate timer resolution from min time
             });
         }
     }
@@ -308,12 +308,8 @@ pub const Benchmark = struct {
             }.lessThan);
 
             // Print comparison table
-            std.debug.print("{s:<20} {s:>12} {s:>12} {s:>12}\n", .{
-                "Implementation", "Median (ns)", "Throughput", "Relative"
-            });
-            std.debug.print("{s:<20} {s:>12} {s:>12} {s:>12}\n", .{
-                "-" ** 20, "-" ** 12, "-" ** 12, "-" ** 12
-            });
+            std.debug.print("{s:<20} {s:>12} {s:>12} {s:>12}\n", .{ "Implementation", "Median (ns)", "Throughput", "Relative" });
+            std.debug.print("{s:<20} {s:>12} {s:>12} {s:>12}\n", .{ "-" ** 20, "-" ** 12, "-" ** 12, "-" ** 12 });
 
             // Use Zig stdlib as baseline for relative comparison
             var zig_baseline: ?u64 = null;
@@ -328,7 +324,7 @@ pub const Benchmark = struct {
                 // Calculate speed ratio: baseline/result
                 // Faster = 1.0, slower = < 1.0
                 const relative = @as(f64, @floatFromInt(baseline)) /
-                                @as(f64, @floatFromInt(result.median_ns));
+                    @as(f64, @floatFromInt(result.median_ns));
 
                 // Format throughput appropriately
                 const throughput_str = if (result.throughputMBps()) |mbps|
@@ -416,11 +412,7 @@ pub const Benchmark = struct {
         const minute = @as(u32, @intCast((seconds_today % 3600) / 60));
         const second = @as(u32, @intCast(seconds_today % 60));
 
-        const filename = try std.fmt.allocPrint(
-            self.allocator,
-            "results/{d}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}.md",
-            .{year_day.year, month_day.month.numeric(), month_day.day_index + 1, hour, minute, second}
-        );
+        const filename = try std.fmt.allocPrint(self.allocator, "results/{d}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}-{d:0>2}.md", .{ year_day.year, month_day.month.numeric(), month_day.day_index + 1, hour, minute, second });
 
         // Open file for writing
         const file = try std.fs.cwd().createFile(filename, .{});
@@ -450,13 +442,7 @@ pub const Benchmark = struct {
 
         // Library versions and build configuration
         try writer.writeAll("## Library Versions & Build Configuration\n\n");
-        try writer.print("- **Zig stdlib**: {} (target: {s}-{s}, cpu: {s}, optimize: {s})\n", .{
-            builtin.zig_version,
-            @tagName(builtin.cpu.arch),
-            @tagName(builtin.os.tag),
-            builtin.cpu.model.name,
-            @tagName(builtin.mode)
-        });
+        try writer.print("- **Zig stdlib**: {} (target: {s}-{s}, cpu: {s}, optimize: {s})\n", .{ builtin.zig_version, @tagName(builtin.cpu.arch), @tagName(builtin.os.tag), builtin.cpu.model.name, @tagName(builtin.mode) });
         try writer.writeAll("  - Flags not set: -Dcpu=baseline, -Dzig-backend=stage2_c\n");
         try writer.writeAll("  - Performance target: OPTIMAL\n");
         try writer.writeAll("- **Rust sha2**: 0.10.9 (features: asm,default,sha2-asm,std, RUSTFLAGS: -C target-cpu=native)\n");
@@ -522,7 +508,7 @@ pub const Benchmark = struct {
             // Write table rows
             for (results) |result| {
                 const relative = @as(f64, @floatFromInt(baseline)) /
-                                @as(f64, @floatFromInt(result.median_ns));
+                    @as(f64, @floatFromInt(result.median_ns));
 
                 const throughput_str = if (result.throughputMBps()) |mbps|
                     try std.fmt.allocPrint(self.allocator, "{d:.2} MB/s", .{mbps})

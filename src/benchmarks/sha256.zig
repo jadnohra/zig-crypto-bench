@@ -25,14 +25,14 @@ pub fn run(bench: *harness.Benchmark) !void {
     const test_cases = [_]struct {
         size: usize,
         name: []const u8,
-        iterations_override: ?u32,  // Optional: fewer iterations for large inputs
+        iterations_override: ?u32, // Optional: fewer iterations for large inputs
     }{
-        .{ .size = 32,              .name = "32 B",   .iterations_override = null },    // Minimum input
-        .{ .size = 64,              .name = "64 B",   .iterations_override = null },    // One SHA256 block
-        .{ .size = 128,             .name = "128 B",  .iterations_override = null },    // Two blocks
-        .{ .size = 1024,            .name = "1 KB",   .iterations_override = null },    // Small message
-        .{ .size = 1024 * 1024,     .name = "1 MB",   .iterations_override = null },    // Medium message
-        .{ .size = 10 * 1024 * 1024, .name = "10 MB", .iterations_override = 1000 },    // Large (fewer iterations)
+        .{ .size = 32, .name = "32 B", .iterations_override = null }, // Minimum input
+        .{ .size = 64, .name = "64 B", .iterations_override = null }, // One SHA256 block
+        .{ .size = 128, .name = "128 B", .iterations_override = null }, // Two blocks
+        .{ .size = 1024, .name = "1 KB", .iterations_override = null }, // Small message
+        .{ .size = 1024 * 1024, .name = "1 MB", .iterations_override = null }, // Medium message
+        .{ .size = 10 * 1024 * 1024, .name = "10 MB", .iterations_override = 1000 }, // Large (fewer iterations)
     };
 
     // Run benchmarks for each size
@@ -67,11 +67,7 @@ fn benchmarkSize(
     random.bytes(input);
 
     // Format operation name
-    const operation_name = try std.fmt.allocPrint(
-        bench.allocator,
-        "SHA256 {s}",
-        .{size_name}
-    );
+    const operation_name = try std.fmt.allocPrint(bench.allocator, "SHA256 {s}", .{size_name});
     defer bench.allocator.free(operation_name);
 
     // Override iterations for large inputs (they take longer)
@@ -101,7 +97,7 @@ fn benchmarkSize(
                     std.mem.doNotOptimizeAway(&hash);
                 }
             }.run,
-            size,  // bytes_processed for throughput calculation
+            size, // bytes_processed for throughput calculation
         );
     }
 
@@ -119,11 +115,7 @@ fn benchmarkSize(
             struct {
                 fn run() void {
                     var hash: [32]u8 = undefined;
-                    rust_sha256(
-                        S.input_data.ptr,
-                        S.input_data.len,
-                        &hash
-                    );
+                    rust_sha256(S.input_data.ptr, S.input_data.len, &hash);
                     std.mem.doNotOptimizeAway(&hash);
                 }
             }.run,
@@ -137,7 +129,7 @@ fn verifyCorrectness(allocator: std.mem.Allocator) !void {
     // Test vectors from NIST
     const test_vectors = [_]struct {
         input: []const u8,
-        expected: []const u8,  // Hex string
+        expected: []const u8, // Hex string
     }{
         .{
             .input = "abc",
@@ -198,7 +190,7 @@ fn verifyCorrectness(allocator: std.mem.Allocator) !void {
     var prng = std.Random.DefaultPrng.init(0xDEADBEEF);
     const random = prng.random();
 
-    const large_input = try allocator.alloc(u8, 1024 * 16);  // 16KB
+    const large_input = try allocator.alloc(u8, 1024 * 16); // 16KB
     defer allocator.free(large_input);
     random.bytes(large_input);
 

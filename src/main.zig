@@ -82,13 +82,7 @@ pub fn main() !void {
 
         // Library versions and build configuration (formal specification)
         std.debug.print("Library Versions & Build Configuration:\n", .{});
-        std.debug.print("  Zig stdlib:         {} (target: {s}-{s}, cpu: {s}, optimize: {s})\n", .{
-            builtin.zig_version,
-            @tagName(builtin.cpu.arch),
-            @tagName(builtin.os.tag),
-            builtin.cpu.model.name,
-            @tagName(builtin.mode)
-        });
+        std.debug.print("  Zig stdlib:         {} (target: {s}-{s}, cpu: {s}, optimize: {s})\n", .{ builtin.zig_version, @tagName(builtin.cpu.arch), @tagName(builtin.os.tag), builtin.cpu.model.name, @tagName(builtin.mode) });
         std.debug.print("                       Flags not set: -Dcpu=baseline, -Dzig-backend=stage2_c\n", .{});
         std.debug.print("                       Performance target: OPTIMAL\n", .{});
         std.debug.print("  Rust sha2:          0.10.9 (features: asm,default,sha2-asm,std, RUSTFLAGS: -C target-cpu=native)\n", .{});

@@ -10,10 +10,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // Build the Rust library first with native CPU optimizations
-    const cargo_build = b.addSystemCommand(&.{
-        "env", "RUSTFLAGS=-C target-cpu=native",
-        "cargo", "build", "--release", "--manifest-path", "rust-crypto/Cargo.toml"
-    });
+    const cargo_build = b.addSystemCommand(&.{ "env", "RUSTFLAGS=-C target-cpu=native", "cargo", "build", "--release", "--manifest-path", "rust-crypto/Cargo.toml" });
 
     // Main benchmark executable - always use ReleaseFast for benchmarks
     const bench_exe = b.addExecutable(.{

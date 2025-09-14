@@ -58,24 +58,13 @@ zig build bench -- --save-results --iterations 1000 --warmup 100
 
 ## Features
 
-- Configuration transparency
-- Nanosecond-precision timing
-- Statistical analysis
-- Build optimization tracking
-- Correctness verification
-
-
-
-## Methodology
-
-The benchmarking framework employs rigorous measurement protocols:
-
-- Platform-specific nanosecond timers (mach_absolute_time, clock_gettime, etc.)
+- High-resolution platform-specific timers
 - Adaptive iteration counts with auto-scaling for large inputs
 - Warmup phase to stabilize CPU performance
 - Auto-batching for accurate timing of fast operations
 - Correctness verification via bitwise output comparison
 - Transparent build configuration and optimization flags
+- Statistical analysis
 
 ## Contributing
 

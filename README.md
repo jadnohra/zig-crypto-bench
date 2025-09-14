@@ -58,7 +58,6 @@ zig build bench -- --save-results --iterations 1000 --warmup 100
 
 ## Features
 
-- High-resolution platform-specific timers
 - Adaptive iteration counts with auto-scaling for large inputs
 - Warmup phase to stabilize CPU performance
 - Auto-batching for accurate timing of fast operations

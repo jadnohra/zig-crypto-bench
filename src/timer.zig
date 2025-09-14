@@ -8,12 +8,12 @@ const builtin = @import("builtin");
 pub const Timer = if (builtin.os.tag == .windows)
     WindowsTimer
 else if (builtin.os.tag == .macos)
-    MachTimer
+    MacTimer
 else
     PosixTimer;
 
 // macOS: Use mach_absolute_time for nanosecond precision
-const MachTimer = struct {
+const MacTimer = struct {
     const c = @cImport({
         @cInclude("mach/mach_time.h");
     });

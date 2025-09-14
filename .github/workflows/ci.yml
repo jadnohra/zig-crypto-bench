@@ -26,8 +26,11 @@ jobs:
         default: true
         override: true
 
-    - name: Build and test with minimal iterations
-      run: zig build bench -- --iterations 5 --warmup 2
-
-    - name: Check code formatting
+    - name: Check Zig code formatting
       run: zig build fmt-check
+
+    - name: Check Rust code formatting
+      run: cd rust-crypto && cargo fmt -- --check
+
+    - name: Run unit tests (includes smoke test)
+      run: zig build test

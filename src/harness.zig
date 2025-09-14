@@ -1,7 +1,4 @@
-// src/harness.zig - Benchmarking Measurement Framework
-// =====================================================
-// This module provides fair, accurate timing for comparing
-// cryptographic implementations across languages
+// Benchmarking framework for fair timing comparison across implementations
 
 const std = @import("std");
 const time = std.time;
@@ -365,6 +362,29 @@ pub const Benchmark = struct {
         try writer.writeAll("  ]\n}\n");
     }
 
+    // Get git commit hash if available
+    pub fn getGitCommitHash(allocator: std.mem.Allocator) !?[]const u8 {
+        const result = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &[_][]const u8{ "git", "rev-parse", "--short", "HEAD" },
+        }) catch {
+            // Git not available or not a git repo
+            return null;
+        };
+        defer allocator.free(result.stderr);
+
+        if (result.term.Exited != 0) {
+            allocator.free(result.stdout);
+            return null;
+        }
+
+        // Remove trailing newline and create proper allocation
+        const trimmed = std.mem.trimRight(u8, result.stdout, "\n\r");
+        const hash = try allocator.dupe(u8, trimmed);
+        allocator.free(result.stdout);
+        return hash;
+    }
+
     // Save timestamped results to markdown
 
     pub fn saveMarkdownResults(self: *Benchmark) ![]const u8 {
@@ -398,6 +418,19 @@ pub const Benchmark = struct {
 
         // Write markdown header
         try writer.writeAll("# Cryptographic Benchmark Results\n\n");
+
+        // Framework version
+        try writer.writeAll("## Benchmark Framework\n\n");
+        const main = @import("main.zig");
+        const git_hash = try getGitCommitHash(self.allocator);
+        defer if (git_hash) |hash| self.allocator.free(hash);
+
+        if (git_hash) |hash| {
+            try writer.print("- Version: {s} (git-{s})\n", .{ main.VERSION, hash });
+        } else {
+            try writer.print("- Version: {s}\n", .{main.VERSION});
+        }
+        try writer.writeAll("\n");
 
         // System information
         try writer.writeAll("## System Information\n\n");
@@ -560,3 +593,226 @@ pub const Benchmark = struct {
         };
     }
 };
+
+test "version information is accessible" {
+    const testing = std.testing;
+    const main = @import("main.zig");
+
+    std.debug.print("\n✓ Running: version information is accessible\n", .{});
+
+    // Test that VERSION constant exists and is not empty
+    try testing.expect(main.VERSION.len > 0);
+    try testing.expect(std.mem.startsWith(u8, main.VERSION, "v"));
+}
+
+test "git commit hash retrieval" {
+    const testing = std.testing;
+    // Use a non-tracking allocator for this test due to trimming behavior
+    const allocator = std.heap.page_allocator;
+
+    std.debug.print("\n✓ Running: git commit hash retrieval\n", .{});
+
+    // Test that getGitCommitHash returns a value (may be null in non-git environments)
+    const hash = try Benchmark.getGitCommitHash(allocator);
+    if (hash) |h| {
+        defer allocator.free(h);
+        // If we get a hash, it should be non-empty
+        try testing.expect(h.len > 0);
+    }
+    // null is also acceptable (e.g., not in a git repo)
+}
+
+// External Rust function for testing
+extern fn rust_sha256(data: [*]const u8, len: usize, output: [*]u8) void;
+
+test "benchmark smoke test - minimal iterations" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    std.debug.print("\n✓ Running: benchmark smoke test - minimal iterations\n", .{});
+
+    // Create benchmark with ultra-minimal iterations for fast testing
+    var bench = Benchmark.init(allocator, .{
+        .warmup_iterations = 1,
+        .measure_iterations = 2,
+        .json_output = true, // Suppress output
+        .save_results = false,
+    });
+    defer bench.deinit();
+
+    // Just test with one small size for speed
+    const input = try allocator.alloc(u8, 64);
+    defer allocator.free(input);
+    @memset(input, 'A');
+
+    // Test Zig implementation
+    {
+        const S = struct {
+            var input_data: []const u8 = undefined;
+        };
+        S.input_data = input;
+
+        try bench.measure(
+            "SHA256 Test",
+            "Zig stdlib",
+            struct {
+                fn run() void {
+                    var hash: [32]u8 = undefined;
+                    std.crypto.hash.sha2.Sha256.hash(S.input_data, &hash, .{});
+                    std.mem.doNotOptimizeAway(&hash);
+                }
+            }.run,
+            input.len,
+        );
+    }
+
+    // Test Rust implementation
+    {
+        const S = struct {
+            var input_data: []const u8 = undefined;
+        };
+        S.input_data = input;
+
+        try bench.measure(
+            "SHA256 Test",
+            "Rust (sha2)",
+            struct {
+                fn run() void {
+                    var hash: [32]u8 = undefined;
+                    rust_sha256(S.input_data.ptr, S.input_data.len, &hash);
+                    std.mem.doNotOptimizeAway(&hash);
+                }
+            }.run,
+            input.len,
+        );
+    }
+
+    // Verify both implementations produce the same output (correctness check)
+    var zig_hash: [32]u8 = undefined;
+    std.crypto.hash.sha2.Sha256.hash(input, &zig_hash, .{});
+
+    var rust_hash: [32]u8 = undefined;
+    rust_sha256(input.ptr, input.len, &rust_hash);
+
+    try testing.expectEqualSlices(u8, &zig_hash, &rust_hash);
+
+    // Verify we got results
+    try testing.expect(bench.results.items.len == 2);
+
+    // Check that results are reasonable and different implementations were tested
+    var found_zig = false;
+    var found_rust = false;
+    for (bench.results.items) |result| {
+        // Check timing values are reasonable
+        try testing.expect(result.ns_per_op > 0);
+        try testing.expect(result.median_ns > 0);
+        try testing.expect(result.min_ns <= result.median_ns);
+        try testing.expect(result.median_ns <= result.max_ns);
+
+        // Check we have both implementations
+        if (std.mem.eql(u8, result.implementation, "Zig stdlib")) found_zig = true;
+        if (std.mem.eql(u8, result.implementation, "Rust (sha2)")) found_rust = true;
+    }
+
+    try testing.expect(found_zig);
+    try testing.expect(found_rust);
+
+    std.debug.print("  Smoke test passed: Zig and Rust both tested, hashes match\n", .{});
+}
+
+test "markdown results file contains version and git hash" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+    const main = @import("main.zig");
+
+    std.debug.print("\n✓ Running: markdown results file contains version and git hash\n", .{});
+
+    // Create temp directory for test
+    const temp_dir_name = "test_results_temp";
+    std.fs.cwd().makeDir(temp_dir_name) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
+    defer std.fs.cwd().deleteTree(temp_dir_name) catch {};
+
+    // Create test directory
+    var test_dir = try std.fs.cwd().openDir(temp_dir_name, .{});
+    defer test_dir.close();
+
+    // Create a minimal benchmark instance
+    var bench = Benchmark.init(allocator, .{
+        .warmup_iterations = 1,
+        .measure_iterations = 1,
+        .json_output = false,
+        .save_results = true,
+    });
+    defer bench.deinit();
+
+    // Add a dummy result with properly allocated strings
+    const op_name = try allocator.dupe(u8, "Test Op");
+    const impl_name = try allocator.dupe(u8, "Test Impl");
+    try bench.results.append(.{
+        .operation = op_name,
+        .implementation = impl_name,
+        .ns_per_op = 100,
+        .median_ns = 100,
+        .std_dev = 10.0,
+        .min_ns = 90,
+        .max_ns = 110,
+        .bytes_processed = 1024,
+        .batch_size = 1,
+    });
+
+    // Change to temp dir, save, then change back
+    const original_cwd = try std.fs.cwd().realpathAlloc(allocator, ".");
+    defer allocator.free(original_cwd);
+
+    try std.posix.chdir(temp_dir_name);
+    defer std.posix.chdir(original_cwd) catch {};
+
+    // Save to file
+    const filename = try bench.saveMarkdownResults();
+    defer allocator.free(filename);
+
+    // Read and verify content
+    const file = try test_dir.openFile(filename, .{});
+    defer file.close();
+
+    const content = try file.readToEndAlloc(allocator, 1024 * 1024);
+    defer allocator.free(content);
+
+    // Verify structure and content
+    // 1. Check markdown header
+    try testing.expect(std.mem.indexOf(u8, content, "# Cryptographic Benchmark Results") != null);
+
+    // 2. Check version section exists
+    const version_section = std.mem.indexOf(u8, content, "## Benchmark Framework");
+    try testing.expect(version_section != null);
+
+    // 3. Check version line format (should be near the top)
+    const version_line = std.mem.indexOf(u8, content, "- Version:");
+    try testing.expect(version_line != null);
+
+    // 4. Check VERSION constant is included
+    try testing.expect(std.mem.indexOf(u8, content, main.VERSION) != null);
+
+    // 5. If we have a git hash, verify format is "Version: vX.X.X (git-HASH)"
+    const git_hash = try Benchmark.getGitCommitHash(allocator);
+    if (git_hash) |hash| {
+        defer allocator.free(hash);
+        const expected_format = try std.fmt.allocPrint(allocator, "- Version: {s} (git-{s})", .{ main.VERSION, hash });
+        defer allocator.free(expected_format);
+        try testing.expect(std.mem.indexOf(u8, content, expected_format) != null);
+    } else {
+        // No git, should just have version
+        const expected_format = try std.fmt.allocPrint(allocator, "- Version: {s}", .{main.VERSION});
+        defer allocator.free(expected_format);
+        try testing.expect(std.mem.indexOf(u8, content, expected_format) != null);
+    }
+
+    // 6. Verify version info appears before results
+    const results_section = std.mem.indexOf(u8, content, "## Results");
+    if (results_section) |results_pos| {
+        try testing.expect(version_line.? < results_pos);
+    }
+}

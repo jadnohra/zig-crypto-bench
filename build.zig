@@ -109,6 +109,26 @@ pub fn build(b: *std.Build) void {
     });
     fmt_check_step.dependOn(&fmt_check.step);
 
+    // Test harness.zig
+    const harness_tests = b.addTest(.{
+        .root_source_file = b.path("src/harness.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    harness_tests.step.dependOn(&cargo_build.step);
+    harness_tests.linkLibC();
+    harness_tests.addLibraryPath(b.path("rust-crypto/target/release"));
+    harness_tests.linkSystemLibrary("rust_crypto");
+
+    // On Linux, need additional system libraries for Rust unwinding
+    if (target.result.os.tag == .linux) {
+        harness_tests.linkSystemLibrary("unwind");
+        harness_tests.linkSystemLibrary("gcc_s");
+    }
+
+    const run_harness_tests = b.addRunArtifact(harness_tests);
+    test_step.dependOn(&run_harness_tests.step);
+
     // Default command
     b.default_step = bench_step;
 }

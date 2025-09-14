@@ -1,7 +1,7 @@
 // rust-crypto/src/lib.rs - Rust crypto implementations for benchmarking
 // Using the sha2 crate for SHA256 with hardware acceleration
 
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 /// SHA256 using sha2 crate with hardware acceleration
 #[no_mangle]
@@ -18,4 +18,3 @@ pub extern "C" fn rust_sha256(data: *const u8, len: usize, output: *mut u8) {
         std::ptr::copy_nonoverlapping(result.as_ptr(), output, 32);
     }
 }
-

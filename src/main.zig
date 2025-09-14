@@ -1,10 +1,11 @@
-// src/main.zig - Main Benchmark Runner
-// =====================================
-// Entry point for the benchmarking suite
+// Main benchmark runner entry point
 
 const std = @import("std");
 const builtin = @import("builtin");
 const harness = @import("harness.zig");
+
+// Framework version
+pub const VERSION = "v0.1.0";
 
 // Import individual benchmark modules
 const sha256_bench = @import("benchmarks/sha256.zig");
@@ -24,7 +25,6 @@ const Config = struct {
 };
 
 pub fn main() !void {
-    // ===== SETUP ALLOCATOR =====
     // Using GeneralPurposeAllocator for debug builds to catch leaks
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer {
@@ -35,7 +35,6 @@ pub fn main() !void {
     }
     const allocator = gpa.allocator();
 
-    // ===== PARSE COMMAND LINE =====
     const config = try parseArgs(allocator);
 
     // Show help if requested
@@ -44,7 +43,7 @@ pub fn main() !void {
         return;
     }
 
-    // ===== PRINT HEADER =====
+    // Print header
     if (!config.json_output) {
         printHeader();
 
@@ -100,7 +99,7 @@ pub fn main() !void {
         std.debug.print("\n", .{});
     }
 
-    // ===== INITIALIZE BENCHMARK HARNESS =====
+    // Initialize benchmark harness
     var bench = harness.Benchmark.init(allocator, .{
         .warmup_iterations = config.warmup,
         .measure_iterations = config.iterations,
@@ -109,8 +108,7 @@ pub fn main() !void {
     });
     defer bench.deinit();
 
-    // ===== RUN BENCHMARKS =====
-    // Each benchmark module checks the filter internally
+    // Run benchmarks (each module checks the filter internally)
 
     var benchmarks_run: u32 = 0;
 
@@ -152,7 +150,7 @@ pub fn main() !void {
         return;
     }
 
-    // ===== OUTPUT RESULTS =====
+    // Output results
     if (config.json_output) {
         // Machine-readable JSON to stdout
         try bench.outputJson(std.io.getStdOut().writer());
@@ -161,7 +159,7 @@ pub fn main() !void {
         try bench.printSummary();
     }
 
-    // ===== SAVE RESULTS =====
+    // Save results
     if (config.save_results) {
         const filename = try bench.saveMarkdownResults();
         defer allocator.free(filename);
@@ -170,8 +168,6 @@ pub fn main() !void {
         }
     }
 }
-
-// ===== COMMAND-LINE PARSING =====
 
 fn parseArgs(allocator: std.mem.Allocator) !Config {
     const args = try std.process.argsAlloc(allocator);
@@ -226,8 +222,6 @@ fn parseArgs(allocator: std.mem.Allocator) !Config {
 
     return config;
 }
-
-// ===== HELPER FUNCTIONS =====
 
 fn shouldRun(benchmark_name: []const u8, filter: ?[]const u8) bool {
     if (filter) |f| {

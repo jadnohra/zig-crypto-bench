@@ -277,7 +277,7 @@ fn printHelp() void {
         \\  secp256k1   Elliptic curve operations (coming soon)
         \\  blake2b     BLAKE2b hash function (coming soon)
         \\
-        \\For more information: https://github.com/yourusername/zig-crypto-bench
+        \\For more information: https://github.com/jadnohra/zig-crypto-bench
         \\
     , .{});
 }

@@ -74,7 +74,6 @@ const WindowsTimer = struct {
     }
 };
 
-// Simple wrapper function
 pub fn nanotime() i128 {
     return Timer.read();
 }

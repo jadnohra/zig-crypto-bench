@@ -10,6 +10,17 @@ Cryptographic performance benchmarks across Zig stdlib and Rust implementations 
 
 **Supported platforms**: Linux and macOS (x86_64, aarch64)
 
+## Benchmarked Algorithms
+
+- **SHA-256**: Secure Hash Algorithm 256-bit
+  - Zig: `std.crypto.hash.sha2.Sha256`
+  - Rust: `sha2` crate with hardware acceleration
+- **SHA-512**: Secure Hash Algorithm 512-bit
+  - Zig: `std.crypto.hash.sha2.Sha512` *
+  - Rust: `sha2` crate with hardware acceleration
+
+  \* *Zig's SHA-512 currently lacks hardware acceleration ([#22266](https://github.com/ziglang/zig/issues/22266)), resulting in expected performance differences.*
+
 
 ## Results
 

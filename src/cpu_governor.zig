@@ -10,7 +10,6 @@ pub const CpuGovernorState = enum {
     unknown, // Can't determine
 };
 
-// Simple struct to capture CPU state for comparison
 pub const CpuState = struct {
     frequency: ?u64 = null, // Current frequency in Hz (if available)
     timestamp: i64, // When measured

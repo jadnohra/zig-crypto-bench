@@ -266,14 +266,14 @@ pub const Benchmark = struct {
             try entry.value_ptr.append(result);
         }
 
-        // Print comparison table for each operation
-        var op_it = operations.iterator();
-        while (op_it.next()) |entry| {
-            std.debug.print("Operation: {s}\n", .{entry.key_ptr.*});
+        const main = @import("main.zig");
+        for (main.OPERATION_ORDER) |op_name| {
+            const entry = operations.get(op_name) orelse continue;
+            std.debug.print("Operation: {s}\n", .{op_name});
             std.debug.print("-" ** 50 ++ "\n", .{});
 
             // Sort with Zig stdlib first, then others
-            const results = entry.value_ptr.items;
+            const results = entry.items;
             std.mem.sort(Result, results, {}, struct {
                 fn lessThan(_: void, a: Result, b: Result) bool {
                     // Always put Zig stdlib first
@@ -514,12 +514,11 @@ pub const Benchmark = struct {
             try entry.value_ptr.append(result);
         }
 
-        // Write markdown table for each operation
-        var op_it = operations.iterator();
-        while (op_it.next()) |entry| {
-            try writer.print("### {s}\n\n", .{entry.key_ptr.*});
+        for (main.OPERATION_ORDER) |op_name| {
+            const entry = operations.get(op_name) orelse continue;
+            try writer.print("### {s}\n\n", .{op_name});
 
-            const results = entry.value_ptr.items;
+            const results = entry.items;
             // Sort with Zig stdlib first
             std.mem.sort(Result, results, {}, struct {
                 fn lessThan(_: void, a: Result, b: Result) bool {

@@ -8,8 +8,27 @@ const cpu_governor = @import("cpu_governor.zig");
 // Framework version
 pub const VERSION = "v0.1.0";
 
+// Benchmark result display order
+pub const OPERATION_ORDER = [_][]const u8{
+    "SHA256 32 B",
+    "SHA256 64 B",
+    "SHA256 128 B",
+    "SHA256 256 B",
+    "SHA256 1 KB",
+    "SHA256 1 MB",
+    "SHA256 10 MB",
+    "SHA512 32 B",
+    "SHA512 64 B",
+    "SHA512 128 B",
+    "SHA512 256 B",
+    "SHA512 1 KB",
+    "SHA512 1 MB",
+    "SHA512 10 MB",
+};
+
 // Import individual benchmark modules
 const sha256_bench = @import("benchmarks/sha256.zig");
+const sha512_bench = @import("benchmarks/sha512.zig");
 // Future benchmarks:
 // const keccak256_bench = @import("benchmarks/keccak256.zig");
 // const secp256k1_bench = @import("benchmarks/secp256k1.zig");
@@ -37,6 +56,12 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     const config = try parseArgs(allocator);
+    defer {
+        // Free duplicated filter string if present
+        if (config.filter) |f| {
+            allocator.free(f);
+        }
+    }
 
     // Show help if requested
     if (config.help) {
@@ -132,6 +157,12 @@ pub fn main() !void {
         benchmarks_run += 1;
     }
 
+    // SHA512 benchmark
+    if (shouldRun("sha512", config.filter)) {
+        try sha512_bench.run(&bench);
+        benchmarks_run += 1;
+    }
+
     // Future benchmarks - uncomment as implemented:
     // if (shouldRun("keccak256", config.filter)) {
     //     try keccak256_bench.run(&bench);
@@ -153,7 +184,7 @@ pub fn main() !void {
         if (!config.json_output) {
             if (config.filter) |f| {
                 std.debug.print("No benchmarks matched filter: '{s}'\n", .{f});
-                std.debug.print("Available benchmarks: sha256\n", .{}); // Add more as implemented
+                std.debug.print("Available benchmarks: sha256, sha512\n", .{}); // Add more as implemented
             } else {
                 std.debug.print("No benchmarks available to run.\n", .{});
             }
@@ -222,7 +253,8 @@ fn parseArgs(allocator: std.mem.Allocator) !Config {
                 std.debug.print("Error: --filter requires an argument\n", .{});
                 std.process.exit(1);
             }
-            config.filter = args[i];
+            // Need to duplicate the string since args will be freed
+            config.filter = try allocator.dupe(u8, args[i]);
         } else if (std.mem.eql(u8, arg, "--json") or std.mem.eql(u8, arg, "-j")) {
             config.json_output = true;
         } else if (std.mem.eql(u8, arg, "--save-results")) {
@@ -307,6 +339,7 @@ fn printHelp() void {
         \\
         \\AVAILABLE BENCHMARKS:
         \\  sha256      SHA-256 hash function
+        \\  sha512      SHA-512 hash function
         \\  keccak256   Keccak-256 hash function (coming soon)
         \\  secp256k1   Elliptic curve operations (coming soon)
         \\  blake2b     BLAKE2b hash function (coming soon)

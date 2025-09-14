@@ -6,11 +6,10 @@ const std = @import("std");
 const harness = @import("../harness.zig");
 const crypto = std.crypto;
 
-// ===== RUST FFI =====
-// Declare the external Rust function
+// External Rust function
 extern fn rust_sha256(data: [*]const u8, len: usize, output: [*]u8) void;
 
-// ===== MAIN BENCHMARK ENTRY POINT =====
+// Run SHA256 benchmarks
 pub fn run(bench: *harness.Benchmark) !void {
     // Print benchmark header
     if (!bench.json_output) {
@@ -20,8 +19,7 @@ pub fn run(bench: *harness.Benchmark) !void {
         std.debug.print("└────────────────────────────────────┘\n", .{});
     }
 
-    // ===== TEST DIFFERENT INPUT SIZES =====
-    // This tests cache effects and throughput scaling
+    // Test different input sizes for cache effects and throughput scaling
     const test_cases = [_]struct {
         size: usize,
         name: []const u8,
@@ -40,7 +38,6 @@ pub fn run(bench: *harness.Benchmark) !void {
         try benchmarkSize(bench, test_case.size, test_case.name, test_case.iterations_override);
     }
 
-    // ===== CORRECTNESS VERIFICATION =====
     // Verify all implementations produce identical output
     if (!bench.json_output) {
         std.debug.print("\nVerifying output correctness...\n", .{});
@@ -49,7 +46,7 @@ pub fn run(bench: *harness.Benchmark) !void {
     }
 }
 
-// ===== BENCHMARK SPECIFIC SIZE =====
+// Benchmark implementations for a specific input size
 fn benchmarkSize(
     bench: *harness.Benchmark,
     size: usize,
@@ -79,7 +76,7 @@ fn benchmarkSize(
         bench.measure_iterations = original_iterations;
     }
 
-    // ===== BENCHMARK ZIG STDLIB =====
+    // Benchmark Zig stdlib implementation
     {
         // Use a global variable to pass data to the comptime function
         const S = struct {
@@ -101,7 +98,7 @@ fn benchmarkSize(
         );
     }
 
-    // ===== BENCHMARK RUST SHA2 =====
+    // Benchmark Rust sha2 implementation
     {
         // Use a global variable to pass data to the comptime function
         const S = struct {
@@ -124,7 +121,7 @@ fn benchmarkSize(
     }
 }
 
-// ===== CORRECTNESS VERIFICATION =====
+// Correctness verification
 fn verifyCorrectness(allocator: std.mem.Allocator) !void {
     // Test vectors from NIST
     const test_vectors = [_]struct {

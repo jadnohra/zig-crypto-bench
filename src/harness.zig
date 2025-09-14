@@ -8,9 +8,6 @@ const time = std.time;
 const builtin = @import("builtin");
 const timer = @import("timer.zig");
 
-// ===== CONFIGURATION STRUCTURE =====
-// What users can control about benchmarks
-
 pub const Benchmark = struct {
     allocator: std.mem.Allocator,
     warmup_iterations: u32,
@@ -19,9 +16,6 @@ pub const Benchmark = struct {
     verbose: bool,
     save_results: bool,
     results: std.ArrayList(Result),
-
-    // ===== RESULT STRUCTURE =====
-    // All the data we collect for each benchmark
 
     const Result = struct {
         operation: []const u8, // e.g., "SHA256 1MB"
@@ -57,9 +51,6 @@ pub const Benchmark = struct {
         }
     };
 
-    // ===== INITIALIZATION =====
-    // Create a new benchmark instance
-
     pub fn init(allocator: std.mem.Allocator, config: struct {
         warmup_iterations: u32 = 1000,
         measure_iterations: u32 = 10000,
@@ -77,9 +68,6 @@ pub const Benchmark = struct {
         };
     }
 
-    // ===== CLEANUP =====
-    // Free allocated memory
-
     pub fn deinit(self: *Benchmark) void {
         // Free string copies we made
         for (self.results.items) |result| {
@@ -88,9 +76,6 @@ pub const Benchmark = struct {
         }
         self.results.deinit();
     }
-
-    // ===== CORE MEASUREMENT FUNCTION =====
-    // This is where the actual timing happens
 
     pub fn measure(
         self: *Benchmark,
@@ -120,9 +105,7 @@ pub const Benchmark = struct {
             std.io.getStdErr().writer().writeAll("") catch {};
         }
 
-        // ===== WARMUP PHASE =====
-        // Run the function many times to warm up CPU caches,
-        // trigger frequency scaling, and stabilize performance
+        // Warmup phase: stabilize CPU performance and caches
 
         if (self.verbose and !self.json_output) {
             std.debug.print("  Warmup: {d} iterations...", .{actual_warmup});
@@ -139,8 +122,7 @@ pub const Benchmark = struct {
             std.debug.print(" done\n", .{});
         }
 
-        // ===== MEASUREMENT PHASE =====
-        // Collect many samples for statistical analysis
+        // Measurement phase: collect timing samples
 
         if (self.verbose and !self.json_output) {
             std.debug.print("  Measuring: {d} iterations...", .{actual_iterations});
@@ -205,8 +187,7 @@ pub const Benchmark = struct {
             std.debug.print(" done\n", .{});
         }
 
-        // ===== STATISTICAL ANALYSIS =====
-        // Calculate median, mean, std dev from samples
+        // Statistical analysis
 
         const stats = calculateStats(samples);
 
@@ -230,8 +211,7 @@ pub const Benchmark = struct {
         }
     }
 
-    // ===== RESULT PRINTING =====
-    // Human-readable output for single result
+    // Print individual result
 
     fn printResult(self: *Benchmark, result: Result) void {
         // Results right after the header
@@ -257,8 +237,7 @@ pub const Benchmark = struct {
         }
     }
 
-    // ===== SUMMARY TABLE =====
-    // Compare all results at the end
+    // Print comparison summary
 
     pub fn printSummary(self: *Benchmark) !void {
         if (self.results.items.len == 0) {
@@ -344,8 +323,7 @@ pub const Benchmark = struct {
         }
     }
 
-    // ===== JSON OUTPUT =====
-    // Machine-readable format for tools/CI
+    // Output results as JSON
 
     pub fn outputJson(self: *Benchmark, writer: anytype) !void {
         try writer.writeAll("{\n");
@@ -387,8 +365,7 @@ pub const Benchmark = struct {
         try writer.writeAll("  ]\n}\n");
     }
 
-    // ===== MARKDOWN RESULTS SAVING =====
-    // Save timestamped results to results/ directory
+    // Save timestamped results to markdown
 
     pub fn saveMarkdownResults(self: *Benchmark) ![]const u8 {
         if (self.results.items.len == 0) return "";
@@ -531,8 +508,7 @@ pub const Benchmark = struct {
         return filename;
     }
 
-    // ===== STATISTICAL CALCULATIONS =====
-    // Core math for analyzing samples
+    // Statistical calculations
 
     const Stats = struct {
         mean: u64,

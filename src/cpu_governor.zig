@@ -4,16 +4,16 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 pub const CpuGovernorState = enum {
-    performance,  // Optimal for benchmarking
-    powersave,    // Will throttle
-    ondemand,     // Will throttle
-    unknown,      // Can't determine
+    performance, // Optimal for benchmarking
+    powersave, // Will throttle
+    ondemand, // Will throttle
+    unknown, // Can't determine
 };
 
 // Simple struct to capture CPU state for comparison
 pub const CpuState = struct {
-    frequency: ?u64 = null,  // Current frequency in Hz (if available)
-    timestamp: i64,           // When measured
+    frequency: ?u64 = null, // Current frequency in Hz (if available)
+    timestamp: i64, // When measured
 };
 
 pub fn checkCpuGovernor(allocator: std.mem.Allocator) !CpuGovernorState {
@@ -47,9 +47,9 @@ fn checkLinuxGovernor(allocator: std.mem.Allocator) !CpuGovernorState {
     } else if (std.mem.eql(u8, governor, "ondemand")) {
         return .ondemand;
     } else if (std.mem.eql(u8, governor, "schedutil")) {
-        return .ondemand;  // Dynamic scaling
+        return .ondemand; // Dynamic scaling
     } else if (std.mem.eql(u8, governor, "conservative")) {
-        return .ondemand;  // Dynamic scaling
+        return .ondemand; // Dynamic scaling
     }
 
     return .unknown;

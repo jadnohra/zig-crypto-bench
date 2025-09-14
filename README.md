@@ -67,7 +67,7 @@ zig build bench -- --save-results --iterations 1000 --warmup 100
 
 Contributing
 
-**Hardware Results**: Help expand hardware coverage by contributing benchmark results from your system. Run with --save-results and submit the generated markdown files from the [`results/`](results/) directory.
+**Hardware Results**: Help expand hardware coverage by contributing benchmark results from your system. Run with --save-results and submit the generated markdown files from the [results/](results/) directory.
 
 **Open Issues**: Check the [issues](https://github.com/jadnohra/zig-crypto-bench/issues) for tasks ranging from small improvements to major features.
 

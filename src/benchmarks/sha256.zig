@@ -1,6 +1,4 @@
-// src/benchmarks/sha256.zig - SHA256 Benchmark Implementation
-// ===========================================================
-// Compares SHA256 implementations: Zig stdlib vs Rust sha2 crate
+// SHA256 benchmark comparing Zig stdlib vs Rust sha2 crate
 
 const std = @import("std");
 const harness = @import("../harness.zig");

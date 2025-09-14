@@ -33,6 +33,12 @@ pub fn build(b: *std.Build) void {
     // Need libc for Rust interop
     bench_exe.linkLibC();
 
+    // On Linux, need additional system libraries for Rust unwinding
+    if (target.result.os.tag == .linux) {
+        bench_exe.linkSystemLibrary("unwind");
+        bench_exe.linkSystemLibrary("gcc_s");
+    }
+
     // Install the executable
     b.installArtifact(bench_exe);
 
@@ -61,6 +67,12 @@ pub fn build(b: *std.Build) void {
     unit_tests.addLibraryPath(b.path("rust-crypto/target/release"));
     unit_tests.linkSystemLibrary("rust_crypto");
 
+    // On Linux, need additional system libraries for Rust unwinding
+    if (target.result.os.tag == .linux) {
+        unit_tests.linkSystemLibrary("unwind");
+        unit_tests.linkSystemLibrary("gcc_s");
+    }
+
     const run_unit_tests = b.addRunArtifact(unit_tests);
     test_step.dependOn(&run_unit_tests.step);
 
@@ -76,6 +88,13 @@ pub fn build(b: *std.Build) void {
     check_exe.linkLibC();
     check_exe.addLibraryPath(b.path("rust-crypto/target/release"));
     check_exe.linkSystemLibrary("rust_crypto");
+
+    // On Linux, need additional system libraries for Rust unwinding
+    if (target.result.os.tag == .linux) {
+        check_exe.linkSystemLibrary("unwind");
+        check_exe.linkSystemLibrary("gcc_s");
+    }
+
     check_step.dependOn(&check_exe.step);
 
     // Format commands

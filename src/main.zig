@@ -10,8 +10,8 @@ pub const VERSION = "v0.1.0";
 
 // Benchmark modes
 pub const BenchmarkMode = enum {
-    native,    // Zig direct, Rust FFI (shows real-world performance)
-    ffi,       // Both use FFI (fair algorithm comparison)
+    native, // Zig direct, Rust FFI (shows real-world performance)
+    ffi, // Both use FFI (fair algorithm comparison)
 };
 
 // Benchmark result display order

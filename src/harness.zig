@@ -39,7 +39,7 @@ fn checkFfiOverhead() struct { overhead_ns: i64, has_warning: bool } {
     const overhead_i128 = if (ffi_time > loop_time) ffi_time - loop_time else 0;
     const overhead: i64 = @intCast(overhead_i128);
 
-    if (overhead > 20) {  // Only warn if unexpectedly high
+    if (overhead > 20) { // Only warn if unexpectedly high
         std.debug.print("⚠️  WARNING: FFI overhead is {}ns (expected <20ns)\n", .{overhead});
         std.debug.print("    Results may not be directly comparable.\n", .{});
         return .{ .overhead_ns = overhead, .has_warning = true };
@@ -163,19 +163,11 @@ pub const Benchmark = struct {
 
         // Warmup phase: stabilize CPU performance and caches
 
-        if (self.verbose and !self.json_output) {
-            std.debug.print("  Warmup: {d} iterations...", .{actual_warmup});
-        }
-
         var i: u32 = 0;
         while (i < actual_warmup) : (i += 1) {
             func();
             // Prevent compiler from optimizing away the loop
             std.mem.doNotOptimizeAway(&i);
-        }
-
-        if (self.verbose and !self.json_output) {
-            std.debug.print(" done\n", .{});
         }
 
         // Measurement phase: collect timing samples

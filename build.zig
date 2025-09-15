@@ -12,6 +12,14 @@ pub fn build(b: *std.Build) void {
     // Build the Rust library first with native CPU optimizations
     const cargo_build = b.addSystemCommand(&.{ "env", "RUSTFLAGS=-C target-cpu=native", "cargo", "build", "--release", "--manifest-path", "rust-crypto/Cargo.toml" });
 
+    // Build Zig FFI library for fair comparison
+    const zig_ffi_lib = b.addStaticLibrary(.{
+        .name = "zig_crypto_ffi",
+        .root_source_file = b.path("src/zig_ffi.zig"),
+        .target = target,
+        .optimize = .ReleaseFast,
+    });
+
     // Main benchmark executable - always use ReleaseFast for benchmarks
     const bench_exe = b.addExecutable(.{
         .name = "zig-crypto-bench",
@@ -23,9 +31,10 @@ pub fn build(b: *std.Build) void {
     // Make sure Rust library is built before linking
     bench_exe.step.dependOn(&cargo_build.step);
 
-    // Link the Rust static library
+    // Link both Rust and Zig FFI libraries
     bench_exe.addLibraryPath(b.path("rust-crypto/target/release"));
     bench_exe.linkSystemLibrary("rust_crypto");
+    bench_exe.linkLibrary(zig_ffi_lib);
 
     // Need libc for Rust interop
     bench_exe.linkLibC();
@@ -63,6 +72,7 @@ pub fn build(b: *std.Build) void {
     unit_tests.linkLibC();
     unit_tests.addLibraryPath(b.path("rust-crypto/target/release"));
     unit_tests.linkSystemLibrary("rust_crypto");
+    unit_tests.linkLibrary(zig_ffi_lib);
 
     // On Linux, need additional system libraries for Rust unwinding
     if (target.result.os.tag == .linux) {
@@ -119,6 +129,7 @@ pub fn build(b: *std.Build) void {
     harness_tests.linkLibC();
     harness_tests.addLibraryPath(b.path("rust-crypto/target/release"));
     harness_tests.linkSystemLibrary("rust_crypto");
+    harness_tests.linkLibrary(zig_ffi_lib);
 
     // On Linux, need additional system libraries for Rust unwinding
     if (target.result.os.tag == .linux) {

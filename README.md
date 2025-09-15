@@ -79,6 +79,7 @@ zig build bench -- --save-results --iterations 1000 --warmup 100
 - Statistical analysis
 - CPU frequency governor detection and throttling warnings
 - Framework versioning with git commit tracking in results
+- Two measurement modes: FFI (both use C ABI for fair comparison, default) and native (Zig direct/Rust FFI)
 
 ## Contributing
 

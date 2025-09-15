@@ -8,6 +8,12 @@ const cpu_governor = @import("cpu_governor.zig");
 // Framework version
 pub const VERSION = "v0.1.0";
 
+// Benchmark modes
+pub const BenchmarkMode = enum {
+    native,    // Zig direct, Rust FFI (shows real-world performance)
+    ffi,       // Both use FFI (fair algorithm comparison)
+};
+
 // Benchmark result display order
 pub const OPERATION_ORDER = [_][]const u8{
     "SHA256 32 B",
@@ -41,6 +47,7 @@ const Config = struct {
     iterations: u32 = 500,
     warmup: u32 = 50,
     save_results: bool = false,
+    mode: BenchmarkMode = .ffi, // Default to fair comparison
     help: bool = false,
 };
 
@@ -132,17 +139,31 @@ pub fn main() !void {
         if (config.filter) |f| {
             std.debug.print("  Filter:             {s}\n", .{f});
         }
-        std.debug.print("\n", .{});
     }
 
-    // Initialize benchmark harness
+    // Initialize benchmark harness (which checks FFI overhead if needed)
     var bench = harness.Benchmark.init(allocator, .{
         .warmup_iterations = config.warmup,
         .measure_iterations = config.iterations,
         .json_output = config.json_output,
         .save_results = config.save_results,
+        .mode = config.mode,
     });
     defer bench.deinit();
+
+    // Show mode after FFI check is done
+    if (!config.json_output) {
+        if (config.mode == .native) {
+            std.debug.print("  Mode:               Native\n\n", .{});
+        } else {
+            // FFI mode - show overhead
+            if (bench.ffi_has_warning) {
+                std.debug.print("  Mode:               FFI (~{}ns overhead WARNING!)\n\n", .{bench.ffi_overhead_ns});
+            } else {
+                std.debug.print("  Mode:               FFI (~{}ns overhead)\n\n", .{bench.ffi_overhead_ns});
+            }
+        }
+    }
 
     // Capture CPU state before benchmarking
     bench.cpu_state_before = cpu_governor.captureCpuState(allocator);
@@ -259,6 +280,10 @@ fn parseArgs(allocator: std.mem.Allocator) !Config {
             config.json_output = true;
         } else if (std.mem.eql(u8, arg, "--save-results")) {
             config.save_results = true;
+        } else if (std.mem.eql(u8, arg, "--native")) {
+            config.mode = .native;
+        } else if (std.mem.eql(u8, arg, "--ffi")) {
+            config.mode = .ffi;
         } else if (std.mem.eql(u8, arg, "--iterations") or std.mem.eql(u8, arg, "-i")) {
             i += 1;
             if (i >= args.len) {
@@ -330,6 +355,8 @@ fn printHelp() void {
         \\  -w, --warmup N          Number of warmup iterations (default: 50)
         \\  -j, --json              Output results as JSON
         \\  --save-results          Save timestamped results to results/ directory
+        \\  --native                Use native Zig calls (real-world performance)
+        \\  --ffi                   Both use FFI (fair comparison, default)
         \\
         \\EXAMPLES:
         \\  zig-crypto-bench                    # Run all benchmarks

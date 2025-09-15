@@ -7,6 +7,9 @@ const crypto = std.crypto;
 // External Rust function
 extern fn rust_sha512(data: [*]const u8, len: usize, output: [*]u8) void;
 
+// External Zig FFI function (for fair comparison)
+extern fn zig_sha512_ffi(data: [*]const u8, len: usize, output: [*]u8) void;
+
 // Run SHA512 benchmarks
 pub fn run(bench: *harness.Benchmark) !void {
     // Print benchmark header
@@ -75,7 +78,7 @@ fn benchmarkSize(
         bench.measure_iterations = original_iterations;
     }
 
-    // Benchmark Zig stdlib implementation
+    // Benchmark Zig implementation (native or FFI based on mode)
     {
         // Use a global variable to pass data to the comptime function
         const S = struct {
@@ -83,18 +86,38 @@ fn benchmarkSize(
         };
         S.input_data = input;
 
-        try bench.measure(
-            operation_name,
-            "Zig stdlib",
-            struct {
-                fn run() void {
-                    var hash: [64]u8 = undefined;
-                    crypto.hash.sha2.Sha512.hash(S.input_data, &hash, .{});
-                    std.mem.doNotOptimizeAway(&hash);
-                }
-            }.run,
-            size, // bytes_processed for throughput calculation
-        );
+        switch (bench.mode) {
+            .native => {
+                // Use native Zig implementation
+                try bench.measure(
+                    operation_name,
+                    "Zig (stdlib)",
+                    struct {
+                        fn run() void {
+                            var hash: [64]u8 = undefined;
+                            crypto.hash.sha2.Sha512.hash(S.input_data, &hash, .{});
+                            std.mem.doNotOptimizeAway(&hash);
+                        }
+                    }.run,
+                    size,
+                );
+            },
+            .ffi => {
+                // Use FFI wrapper for fair comparison
+                try bench.measure(
+                    operation_name,
+                    "Zig (FFI)",
+                    struct {
+                        fn run() void {
+                            var hash: [64]u8 = undefined;
+                            zig_sha512_ffi(S.input_data.ptr, S.input_data.len, &hash);
+                            std.mem.doNotOptimizeAway(&hash);
+                        }
+                    }.run,
+                    size,
+                );
+            },
+        }
     }
 
     // Benchmark Rust sha2 implementation

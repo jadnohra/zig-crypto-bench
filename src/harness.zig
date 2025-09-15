@@ -5,6 +5,48 @@ const time = std.time;
 const builtin = @import("builtin");
 const timer = @import("timer.zig");
 
+// Minimal FFI function for overhead checking
+extern fn zig_noop_ffi() void;
+
+fn checkFfiOverhead() struct { overhead_ns: i64, has_warning: bool } {
+    const iterations = 100000;
+
+    // Measure FFI call overhead
+    const ffi_start = timer.nanotime();
+    var i: u32 = 0;
+    while (i < iterations) : (i += 1) {
+        zig_noop_ffi();
+    }
+    const ffi_end = timer.nanotime();
+
+    // Measure empty loop overhead
+    const loop_start = timer.nanotime();
+    i = 0;
+    while (i < iterations) : (i += 1) {
+        // Empty loop
+        std.mem.doNotOptimizeAway(&i);
+    }
+    const loop_end = timer.nanotime();
+
+    // Round to nearest nanosecond (add half divisor before truncating)
+    const ffi_total = ffi_end - ffi_start;
+    const loop_total = loop_end - loop_start;
+    const half = iterations / 2;
+    const ffi_time = @divTrunc(ffi_total + half, iterations);
+    const loop_time = @divTrunc(loop_total + half, iterations);
+
+    // Calculate the difference (FFI overhead)
+    const overhead_i128 = if (ffi_time > loop_time) ffi_time - loop_time else 0;
+    const overhead: i64 = @intCast(overhead_i128);
+
+    if (overhead > 20) {  // Only warn if unexpectedly high
+        std.debug.print("⚠️  WARNING: FFI overhead is {}ns (expected <20ns)\n", .{overhead});
+        std.debug.print("    Results may not be directly comparable.\n", .{});
+        return .{ .overhead_ns = overhead, .has_warning = true };
+    }
+    return .{ .overhead_ns = overhead, .has_warning = false };
+}
+
 pub const Benchmark = struct {
     allocator: std.mem.Allocator,
     warmup_iterations: u32,
@@ -12,6 +54,9 @@ pub const Benchmark = struct {
     json_output: bool,
     verbose: bool,
     save_results: bool,
+    mode: @import("main.zig").BenchmarkMode,
+    ffi_overhead_ns: i64 = 0,
+    ffi_has_warning: bool = false,
     results: std.ArrayList(Result),
     cpu_state_before: ?@import("cpu_governor.zig").CpuState = null,
 
@@ -54,16 +99,29 @@ pub const Benchmark = struct {
         measure_iterations: u32 = 10000,
         json_output: bool = false,
         save_results: bool = false,
+        mode: @import("main.zig").BenchmarkMode = .ffi,
     }) Benchmark {
-        return .{
+        var bench = Benchmark{
             .allocator = allocator,
             .warmup_iterations = config.warmup_iterations,
             .measure_iterations = config.measure_iterations,
             .json_output = config.json_output,
             .verbose = false,
             .save_results = config.save_results,
+            .mode = config.mode,
+            .ffi_overhead_ns = 0,
+            .ffi_has_warning = false,
             .results = std.ArrayList(Result).init(allocator),
         };
+
+        // Check FFI overhead if in FFI mode (just warn if high)
+        if (config.mode == .ffi) {
+            const result = checkFfiOverhead();
+            bench.ffi_overhead_ns = result.overhead_ns;
+            bench.ffi_has_warning = result.has_warning;
+        }
+
+        return bench;
     }
 
     pub fn deinit(self: *Benchmark) void {
@@ -186,7 +244,6 @@ pub const Benchmark = struct {
         }
 
         // Statistical analysis
-
         const stats = calculateStats(samples);
 
         // Store the result
@@ -246,6 +303,18 @@ pub const Benchmark = struct {
         std.debug.print("\n" ++ "=" ** 60 ++ "\n", .{});
         std.debug.print("SUMMARY\n", .{});
         std.debug.print("=" ** 60 ++ "\n\n", .{});
+
+        // Show measurement methodology based on mode
+        std.debug.print("Measurement Methodology:\n", .{});
+        switch (self.mode) {
+            .native => {
+                std.debug.print("  Mode: Native\n", .{});
+            },
+            .ffi => {
+                std.debug.print("  Mode: FFI (~{}ns overhead)\n", .{self.ffi_overhead_ns});
+            },
+        }
+        std.debug.print("\n", .{});
 
         // Group results by operation for comparison
         var operations = std.StringHashMap(std.ArrayList(Result)).init(self.allocator);
@@ -621,6 +690,117 @@ pub const Benchmark = struct {
     }
 };
 
+test "FFI overhead check is reasonable" {
+    const testing = std.testing;
+
+    std.debug.print("\n✓ Running: FFI overhead check\n", .{});
+
+    // Measure FFI overhead (similar to checkFfiOverhead but returning value for test)
+    const iterations = 100000;
+    const ffi_start = timer.nanotime();
+    var i: u32 = 0;
+    while (i < iterations) : (i += 1) {
+        zig_noop_ffi();
+    }
+    const ffi_end = timer.nanotime();
+
+    const loop_start = timer.nanotime();
+    i = 0;
+    while (i < iterations) : (i += 1) {
+        std.mem.doNotOptimizeAway(&i);
+    }
+    const loop_end = timer.nanotime();
+
+    const ffi_time = @divTrunc(ffi_end - ffi_start, iterations);
+    const loop_time = @divTrunc(loop_end - loop_start, iterations);
+    const overhead = if (ffi_time > loop_time) ffi_time - loop_time else 0;
+
+    // FFI overhead should be reasonable (typically < 20ns)
+    try testing.expect(overhead < 100); // Should be well under 100ns
+}
+
+// External Zig FFI function for mode testing
+extern fn zig_sha256_ffi(data: [*]const u8, len: usize, output: [*]u8) void;
+
+test "benchmark modes work correctly" {
+    const testing = std.testing;
+    const allocator = testing.allocator;
+
+    std.debug.print("\n✓ Running: benchmark modes test\n", .{});
+
+    // Test input
+    const input = "test data for hashing";
+
+    // Test native mode
+    var bench_native = Benchmark.init(allocator, .{
+        .warmup_iterations = 5,
+        .measure_iterations = 10,
+        .json_output = true,
+        .save_results = false,
+        .mode = .native,
+    });
+    defer bench_native.deinit();
+
+    const S1 = struct {
+        var input_data: []const u8 = undefined;
+    };
+    S1.input_data = input;
+
+    try bench_native.measure(
+        "test",
+        "Zig (stdlib)",
+        struct {
+            fn run() void {
+                var hash: [32]u8 = undefined;
+                std.crypto.hash.sha2.Sha256.hash(S1.input_data, &hash, .{});
+                std.mem.doNotOptimizeAway(&hash);
+            }
+        }.run,
+        input.len,
+    );
+
+    // Test FFI mode
+    var bench_ffi = Benchmark.init(allocator, .{
+        .warmup_iterations = 5,
+        .measure_iterations = 10,
+        .json_output = true,
+        .save_results = false,
+        .mode = .ffi,
+    });
+    defer bench_ffi.deinit();
+
+    const S2 = struct {
+        var input_data: []const u8 = undefined;
+    };
+    S2.input_data = input;
+
+    try bench_ffi.measure(
+        "test",
+        "Zig (FFI)",
+        struct {
+            fn run() void {
+                var hash: [32]u8 = undefined;
+                zig_sha256_ffi(S2.input_data.ptr, S2.input_data.len, &hash);
+                std.mem.doNotOptimizeAway(&hash);
+            }
+        }.run,
+        input.len,
+    );
+
+    // Get results
+    const native_time = bench_native.results.items[0].median_ns;
+    const ffi_time = bench_ffi.results.items[0].median_ns;
+
+    // Both times should be reasonable (> 0, < 10000ns for small input)
+    try testing.expect(native_time > 0 and native_time < 10000);
+    try testing.expect(ffi_time > 0 and ffi_time < 10000);
+
+    // FFI may be slightly slower than native, but should be in same ballpark
+    // (within 2x since FFI overhead is negligible)
+    const ratio = @as(f64, @floatFromInt(ffi_time)) / @as(f64, @floatFromInt(native_time));
+    try testing.expect(ratio < 3.0); // FFI shouldn't be more than 3x slower
+}
+
 test "version information is accessible" {
     const testing = std.testing;
     const main = @import("main.zig");
@@ -681,7 +861,7 @@ test "benchmark smoke test - minimal iterations" {
 
         try bench.measure(
             "SHA256 Test",
-            "Zig stdlib",
+            if (bench.mode == .native) "Zig (stdlib)" else "Zig (FFI)",
             struct {
                 fn run() void {
                     var hash: [32]u8 = undefined;
@@ -737,7 +917,8 @@ test "benchmark smoke test - minimal iterations" {
         try testing.expect(result.median_ns <= result.max_ns);
 
         // Check we have both implementations
-        if (std.mem.eql(u8, result.implementation, "Zig stdlib")) found_zig = true;
+        if (std.mem.eql(u8, result.implementation, "Zig (stdlib)") or
+            std.mem.eql(u8, result.implementation, "Zig (FFI)")) found_zig = true;
         if (std.mem.eql(u8, result.implementation, "Rust (sha2)")) found_rust = true;
     }
 

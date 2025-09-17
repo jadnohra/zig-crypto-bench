@@ -352,7 +352,7 @@ test "reproducibility: multiple runs produce consistent results" {
     // Results should be within 3x of each other
     // (very generous bound to account for system variance)
     const ratio = @as(f64, @floatFromInt(result2.median_ns)) /
-                  @as(f64, @floatFromInt(result1.median_ns));
+        @as(f64, @floatFromInt(result1.median_ns));
     try testing.expect(ratio > 0.33 and ratio < 3.0);
 }
 
@@ -400,7 +400,6 @@ test "edge cases: single measurement iteration" {
     try testing.expect(r.median_ns >= 0);
     try testing.expect(r.max_ns >= 0);
 }
-
 
 // ============================================================================
 // Framework Tests

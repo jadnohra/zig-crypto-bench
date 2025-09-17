@@ -21,15 +21,7 @@ pub fn build(b: *std.Build) void {
 
     // Build Rust cryptographic library with native CPU optimizations
     // This ensures maximum performance for the Rust implementations
-    const cargo_build = b.addSystemCommand(&.{
-        "env",
-        "RUSTFLAGS=-C target-cpu=native",
-        "cargo",
-        "build",
-        "--release",
-        "--manifest-path",
-        "rust-crypto/Cargo.toml"
-    });
+    const cargo_build = b.addSystemCommand(&.{ "env", "RUSTFLAGS=-C target-cpu=native", "cargo", "build", "--release", "--manifest-path", "rust-crypto/Cargo.toml" });
 
     // ========================================================================
     // Zig Libraries
@@ -53,7 +45,7 @@ pub fn build(b: *std.Build) void {
         .name = "zig-crypto-bench",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
-        .optimize = .ReleaseFast,  // Critical for benchmark accuracy
+        .optimize = .ReleaseFast, // Critical for benchmark accuracy
     });
 
     // Ensure Rust library is built before linking
@@ -63,7 +55,7 @@ pub fn build(b: *std.Build) void {
     bench_exe.addLibraryPath(b.path("rust-crypto/target/release"));
     bench_exe.linkSystemLibrary("rust_crypto");
     bench_exe.linkLibrary(zig_ffi_lib);
-    bench_exe.linkLibC();  // Required for Rust FFI
+    bench_exe.linkLibC(); // Required for Rust FFI
 
     // Platform-specific linking requirements
     if (target.result.os.tag == .linux) {

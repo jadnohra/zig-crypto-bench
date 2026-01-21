@@ -45,3 +45,9 @@ desktop.ini
 build/
 dist/
 out/
+
+# Local development files (configs, credentials, test data)
+local/
+*.local
+.env
+.env.*
